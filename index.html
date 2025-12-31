@@ -1,58 +1,102 @@
 <!doctype html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>AR Car Configurator with Color</title>
+    <title>Car Configurator Pro</title>
+    
     <style>
-      html, body { margin: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-      #container { width: 100%; height: 100%; }
+        :root {
+            --primary-blue: #007bff;
+            --glass-bg: rgba(0, 0, 0, 0.75);
+        }
 
-      /* Common UI Layer for both modes */
-      .ui-layer {
-        position: fixed; z-index: 10; width: 100%;
-        display: flex; flex-direction: column; align-items: center;
-        padding-bottom: 30px; /* Space for buttons */
-      }
+        html, body { 
+            margin: 0; 
+            height: 100%; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000;
+        }
 
-      /* Button for AR Card Mode */
-      #swap-btn {
-        position: absolute; bottom: 30px;
-        padding: 18px 30px; background: #1a1a1a; color: #00d1ff;
-        border: 2px solid #00d1ff; border-radius: 50px; font-weight: bold;
-        display: none; box-shadow: 0 0 15px rgba(0,209,255,0.4);
-        text-transform: uppercase; letter-spacing: 1px;
-        cursor: pointer;
-      }
+        #container { 
+            width: 100%; 
+            height: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
+        }
 
-      /* Color Selector UI for Plane Tracking Mode */
-      #color-selector {
-        position: absolute; bottom: 30px;
-        display: none; /* Hidden by default, shown in plane tracking */
-        background: rgba(0,0,0,0.6);
-        border-radius: 10px;
-        padding: 10px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      }
-      .color-option {
-        width: 40px; height: 40px;
-        border-radius: 50%;
-        margin: 0 8px;
-        cursor: pointer;
-        border: 3px solid transparent; /* For selected state */
-        transition: border-color 0.2s ease-in-out;
-      }
-      .color-option.selected {
-        border-color: #00d1ff; /* Highlight selected color */
-      }
-      .color-option:hover {
-        opacity: 0.8;
-      }
+        /* Fixed UI Layer - Always on Top */
+        .ui-layer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none; /* Let touches pass through to AR */
+            padding-bottom: env(safe-area-inset-bottom, 30px);
+        }
 
-      /* Specific colors */
-      #color-white { background-color: #f0f0f0; }
-      #color-red { background-color: #e62e2e; }
-      #color-blue { background-color: #2e5ce6; }
+        /* Re-enable pointer events for buttons */
+        #swap-btn, #color-selector {
+            pointer-events: auto;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #swap-btn {
+            padding: 18px 40px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.4);
+            display: none; /* Shown via JS */
+            margin-bottom: 20px;
+        }
+
+        #swap-btn:active {
+            transform: scale(0.95);
+        }
+
+        #color-selector {
+            display: none; /* Shown in floor mode */
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 15px 25px;
+            gap: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .color-option {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        .color-option.selected {
+            border-color: var(--primary-blue);
+            transform: scale(1.1);
+        }
+
+        /* Color Values */
+        #color-white { background: #ffffff; }
+        #color-red   { background: #cc0000; }
+        #color-blue  { background: #0033aa; }
     </style>
 
     <script type="importmap">
@@ -65,126 +109,110 @@
     }
     </script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  </head>
-  <body>
-    <div class="ui-layer">
-      <button id="swap-btn">View Full Size on Floor</button>
+</head>
+<body>
 
-      <div id="color-selector">
-        <div id="color-white" class="color-option selected" data-color-variant="WhitePaint"></div>
-        <div id="color-red" class="color-option" data-color-variant="RedPaint"></div>
-        <div id="color-blue" class="color-option" data-color-variant="BluePaint"></div>
-      </div>
+    <div class="ui-layer">
+        <button id="swap-btn">Place Car on Floor</button>
+
+        <div id="color-selector">
+            <div id="color-white" class="color-option selected" data-variant="WhitePaint"></div>
+            <div id="color-red" class="color-option" data-variant="RedPaint"></div>
+            <div id="color-blue" class="color-option" data-variant="BluePaint"></div>
+        </div>
     </div>
     
     <div id="container"></div>
 
     <model-viewer id="floor-model" 
-      ar ar-modes="scene-viewer webxr" 
-      src="./models/White.glb" 
-      camera-controls 
-      shadow-intensity="1" 
-      environment-image="neutral"
-      style="display: none;">
+        ar 
+        ar-modes="webxr scene-viewer" 
+        src="./models/White.glb" 
+        camera-controls 
+        shadow-intensity="1" 
+        environment-image="neutral"
+        style="display: none; width: 100%; height: 100%; position: absolute; top:0; z-index: 2;">
     </model-viewer>
 
     <script type="module">
-      import * as THREE from 'three';
-      import { MindARThree } from 'mindar-image-three';
-      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import * as THREE from 'three';
+        import { MindARThree } from 'mindar-image-three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-      async function startAR() {
-        const mindarThree = new MindARThree({
-          container: document.querySelector('#container'),
-          imageTargetSrc: './targets.mind'
-        });
+        async function startAR() {
+            const mindarThree = new MindARThree({
+                container: document.querySelector('#container'),
+                imageTargetSrc: './targets.mind'
+            });
 
-        const { renderer, scene, camera } = mindarThree;
+            const { renderer, scene, camera } = mindarThree;
 
-        // Better Lighting for Cars
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-        scene.add(ambientLight);
-        const directLight = new THREE.DirectionalLight(0xffffff, 2);
-        directLight.position.set(0, 5, 5);
-        scene.add(directLight);
+            // Lighting setup for image tracking mode
+            scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+            const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+            sun.position.set(1, 10, 1);
+            scene.add(sun);
 
-        const anchor = mindarThree.addAnchor(0);
+            const anchor = mindarThree.addAnchor(0);
+            const loader = new GLTFLoader();
 
-        // Load the White Car Model for AR Card
-        const loader = new GLTFLoader();
-        loader.load('./models/White.glb', (gltf) => {
-          const car = gltf.scene;
-          car.scale.set(0.1, 0.1, 0.1); 
-          car.rotation.x = Math.PI / 2; 
-          anchor.group.add(car);
-        }, undefined, (error) => {
-          console.error("Error loading model for AR Card:", error);
-        });
+            // Load car for the Image Card
+            loader.load('./models/White.glb', (gltf) => {
+                const car = gltf.scene;
+                car.scale.set(0.1, 0.1, 0.1); 
+                car.rotation.x = Math.PI / 2; 
+                anchor.group.add(car);
+            });
 
-        const swapBtn = document.querySelector('#swap-btn');
-        const colorSelector = document.querySelector('#color-selector');
-        const floorModel = document.querySelector('#floor-model');
+            const swapBtn = document.querySelector('#swap-btn');
+            const colorSelector = document.querySelector('#color-selector');
+            const floorModel = document.querySelector('#floor-model');
 
-        // Show AR Card button when target found
-        anchor.onTargetFound = () => {
-          swapBtn.style.display = 'block';
-        };
-        anchor.onTargetLost = () => {
-          swapBtn.style.display = 'none'; // Hide when card is lost
-        };
+            // --- IMAGE TRACKING LOGIC ---
+            anchor.onTargetFound = () => {
+                swapBtn.style.display = 'block';
+            };
+            anchor.onTargetLost = () => {
+                swapBtn.style.display = 'none';
+            };
 
-        // Hand-off to Plane Tracking
-        swapBtn.addEventListener('click', () => {
-          // Hide MindAR UI
-          document.querySelector('#container').style.display = 'none';
-          swapBtn.style.display = 'none'; 
+            // --- TRANSITION LOGIC ---
+            swapBtn.addEventListener('click', () => {
+                floorModel.activateAR();
+            });
 
-          // Show Model Viewer and its UI
-          floorModel.style.display = 'block';
-          colorSelector.style.display = 'flex'; // Show color selector
-          floorModel.activateAR();
-        });
+            // Handle UI based on AR status
+            floorModel.addEventListener('ar-status', (event) => {
+                if (event.detail.status === 'entered-ar') {
+                    document.getElementById('container').style.visibility = 'hidden';
+                    colorSelector.style.display = 'flex';
+                    swapBtn.style.display = 'none';
+                } else if (event.detail.status === 'exited-ar') {
+                    document.getElementById('container').style.visibility = 'visible';
+                    colorSelector.style.display = 'none';
+                }
+            });
 
-        // Event listener for when model-viewer enters/exits AR mode
-        floorModel.addEventListener('ar-status', (event) => {
-            if (event.detail.status === 'entered-ar') {
-                // Ensure color selector is visible when AR mode starts
-                colorSelector.style.display = 'flex';
-            } else if (event.detail.status === 'exited-ar') {
-                // When exiting AR mode, clean up
-                floorModel.style.display = 'none';
-                colorSelector.style.display = 'none';
-                document.querySelector('#container').style.display = 'block'; // Show MindAR again
-            }
-        });
+            // --- COLOR CONFIGURATION LOGIC ---
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    // UI Polish
+                    document.querySelector('.color-option.selected').classList.remove('selected');
+                    option.classList.add('selected');
 
+                    // Change Model Viewer Variant
+                    const variantName = option.dataset.variant;
+                    floorModel.variantName = variantName;
+                });
+            });
 
-        // Color Selection Logic
-        document.querySelectorAll('.color-option').forEach(option => {
-          option.addEventListener('click', () => {
-            // Remove 'selected' from previous
-            document.querySelector('.color-option.selected')?.classList.remove('selected');
-            // Add 'selected' to current
-            option.classList.add('selected');
-            
-            const variantName = option.dataset.colorVariant;
-            if (floorModel.hasAttribute('variant-name')) {
-              floorModel.removeAttribute('variant-name'); // Clear previous
-            }
-            if (variantName) {
-              floorModel.setAttribute('variant-name', variantName);
-            }
-          });
-        });
+            await mindarThree.start();
+            renderer.setAnimationLoop(() => {
+                renderer.render(scene, camera);
+            });
+        }
 
-
-        await mindarThree.start();
-        renderer.setAnimationLoop(() => {
-          renderer.render(scene, camera);
-        });
-      }
-
-      startAR().catch(console.error);
+        startAR().catch(console.error);
     </script>
-  </body>
+</body>
 </html>
